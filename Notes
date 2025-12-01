@@ -1,0 +1,50 @@
+const express = require('express');
+const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+
+router.get('/', async (req, res) => {
+    try {
+        const events = await prisma.events.findMany({
+            include: {
+                venues: true,
+                users: true,
+                event_categories: {
+                    include: {
+                        categories: true
+                    }
+                }
+            },
+            orderBy: {
+                event_date: 'asc'
+            }
+        });
+        res.json(events);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+router.post('/', async (req, res) => {
+    const { title, description, event_date, creator_id, venue_id } = req.body;
+
+    try {
+        const newEvent = await prisma.events.create({
+            data: {
+                title,
+                description,
+                event_date: new Date(event_date),
+                creator_id,
+                venue_id
+            }
+        });
+        res.json(newEvent);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+module.exports = router;
