@@ -1,160 +1,501 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Manager</title>
+    <title>Visit Events</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; }
-        h1, h2 { color: #333; }
+        :root {
+            --primary: #004e66;
+            --accent: #e35a5a;
+            --bg: #f8f9fa;
+            --text: #333;
+        }
 
-        .form-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
-        button.btn-add { background-color: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button.btn-add:hover { background-color: #218838; }
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); }
+        h1, h2, h3 { font-family: 'Playfair Display', serif; }
 
-        .event-card { background: white; border-left: 5px solid #007bff; padding: 15px; margin-bottom: 15px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .event-info h3 { margin: 0 0 5px 0; }
-        .event-info p { margin: 0; color: #666; font-size: 0.9em; }
-        button.btn-delete { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px;}
-        button.btn-delete:hover { background-color: #c82333; }
+        .auth-container {
+            max-width: 400px; margin: 80px auto; background: white; padding: 40px;
+            border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: none; text-align: center;
+        }
+        .auth-container.active { display: block; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 0.9rem; }
+        input, textarea, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; transition: 0.3s; }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: #00384d; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .link-text { margin-top: 20px; color: var(--primary); cursor: pointer; text-decoration: underline; }
+
+        .app-container { display: none; }
+        .app-container.active { display: block; }
+
+        nav {
+            background: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000;
+        }
+        nav h1 { margin: 0; font-size: 1.5rem; color: var(--primary); }
+
+        .hero-section { position: relative; height: 500px; overflow: hidden; background: #000; }
+        .slide {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; transition: opacity 1s ease-in-out;
+            background-size: cover; background-position: center;
+        }
+        .slide.active { opacity: 1; }
+        .slide::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.8)); }
+
+        .hero-content { position: absolute; bottom: 60px; left: 10%; z-index: 10; color: white; max-width: 600px; }
+        .hero-date { background: var(--accent); padding: 5px 10px; font-weight: bold; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; }
+        .hero-title { font-size: 3.5rem; margin: 15px 0; line-height: 1; }
+        .slider-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; padding: 20px; font-size: 2rem; cursor: pointer; z-index: 20; }
+        .prev-btn { left: 0; } .next-btn { right: 0; }
+
+        .filter-bar {
+            background: white; padding: 20px 5%; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-top: -30px; position: relative; z-index: 50; border-radius: 8px; max-width: 1200px; margin-left: auto; margin-right: auto;
+        }
+
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+        .section-title { text-align: center; margin-bottom: 40px; font-size: 2.5rem; color: var(--primary); }
+        .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; }
+
+        .card {
+            background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s; cursor: pointer; display: flex; flex-direction: column; position: relative;
+        }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.15); }
+        .card-img { height: 200px; background-size: cover; background-position: center; position: relative; }
+        .card-cat { position: absolute; top: 15px; left: 15px; background: white; color: var(--primary); padding: 5px 12px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; border-radius: 4px; }
+        .card-body { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+        .card-date { color: var(--accent); font-weight: bold; margin-bottom: 5px; }
+        .card-title { font-size: 1.2rem; margin: 5px 0 10px; color: var(--primary); }
+        .card-loc { color: #777; font-size: 0.9rem; margin-top: auto; }
+
+        .delete-btn {
+            position: absolute; top: 10px; right: 10px; background: white; color: var(--accent);
+            width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 5; font-weight: bold;
+        }
+
+        .fab {
+            position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
+            background: var(--primary); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 2rem; box-shadow: 0 5px 20px rgba(0,0,0,0.3); cursor: pointer; z-index: 900; border: none; transition: transform 0.2s;
+        }
+        .fab:hover { transform: scale(1.1); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000;
+            display: none; justify-content: center; align-items: center;
+        }
+        .modal-content-box { background: white; width: 90%; max-width: 600px; padding: 30px; border-radius: 12px; max-height: 90vh; overflow-y: auto; position: relative; }
+
+        .product-card-modal {
+            background: white; width: 90%; max-width: 900px; border-radius: 12px; overflow: hidden;
+            display: flex; flex-direction: column; max-height: 90vh; position: relative;
+        }
+        .product-body { display: flex; flex-wrap: wrap; overflow-y: auto; }
+        .product-info { flex: 1; padding: 30px; min-width: 300px; }
+        .product-map { flex: 1; min-width: 300px; background: #eee; height: 400px; }
+        #viewMap, #map { width: 100%; height: 100%; }
+        #map { min-height: 300px; border-radius: 8px; margin-bottom: 15px; }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 2rem; background: none; border: none; cursor: pointer; color: #666; z-index: 999; }
+        .row-btn { display: flex; gap: 10px; }
     </style>
 </head>
 <body>
 
-<h1>📅 Event Manager</h1>
+<div id="authSection" class="auth-container active">
+    <h1 style="color: var(--primary);">Visit Events</h1>
 
-<div class="form-container">
-    <h2>Create new event</h2>
-    <form id="createEventForm">
-        <div class="form-group">
-            <label>Name:</label>
-            <input type="text" id="title" required placeholder="Наприклад: IT Conference">
-        </div>
-        <div class="form-group">
-            <label>About:</label>
-            <textarea id="description" rows="2" placeholder="Короткий опис події"></textarea>
-        </div>
-        <div class="form-group">
-            <label>Next:</label>
-            <input type="datetime-local" id="date" required>
-        </div>
-        <div class="form-group">
-            <label>ID Location (Venue ID):</label>
-            <input type="number" id="venueId" required placeholder="1 або 2" value="1">
-        </div>
-        <div class="form-group">
-            <label>ID Person (Creator ID):</label>
-            <input type="number" id="creatorId" required placeholder="1 або 2" value="1">
-        </div>
-        <button type="submit" class="btn-add">Add event</button>
-    </form>
+    <div id="loginFormWrapper">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div class="form-group"><input type="email" id="loginEmail" placeholder="Email" required></div>
+            <div class="form-group"><input type="password" id="loginPassword" placeholder="Password" required></div>
+            <button type="submit" class="btn btn-primary">Log In</button>
+        </form>
+        <p class="link-text" onclick="toggleAuthMode()">No account? Register</p>
+    </div>
+
+    <div id="registerFormWrapper" style="display: none;">
+        <h2>Register</h2>
+        <form id="registerForm">
+            <div class="form-group"><input type="text" id="regUsername" placeholder="Username" required></div>
+            <div class="form-group"><input type="email" id="regEmail" placeholder="Email" required></div>
+            <div class="form-group"><input type="password" id="regPassword" placeholder="Password" required></div>
+            <button type="submit" class="btn btn-success">Register</button>
+        </form>
+        <p class="link-text" onclick="toggleAuthMode()">Already have an account? Log In</p>
+    </div>
 </div>
 
-<h2>Events list</h2>
-<div id="eventsList">
-    <p>Download...</p>
+<div id="appSection" class="app-container">
+    <nav>
+        <h1>📅 Visit Events</h1>
+        <button onclick="logout()" class="btn btn-danger" style="width: auto; padding: 8px 20px;">Logout</button>
+    </nav>
+
+    <div class="hero-section" id="heroSlider">
+        <button class="slider-btn prev-btn" onclick="moveSlide(-1)">&#10094;</button>
+        <button class="slider-btn next-btn" onclick="moveSlide(1)">&#10095;</button>
+    </div>
+
+    <div class="filter-bar">
+        <select id="filterCategory" class="filter-select" onchange="applyFilters()">
+            <option value="all">All Categories</option>
+        </select>
+        <input type="date" id="filterDate" class="filter-select" onchange="applyFilters()">
+        <input type="text" id="filterSearch" class="filter-select" placeholder="🔍 Search..." onkeyup="applyFilters()">
+    </div>
+
+    <div class="container">
+        <h2 class="section-title">Upcoming Events</h2>
+        <div id="eventsGrid" class="events-grid"></div>
+    </div>
+
+    <button class="fab" onclick="openCreateModal()">+</button>
 </div>
 
-<script>
-    const API_URL = 'http://localhost:3000/events';
-
-    // Оновлена функція fetchEvents
-    async function fetchEvents() {
-        try {
-            const response = await fetch(API_URL);
-
-            // 1. Перевіряємо, чи сервер відповів "ОК" (статус 200-299)
-            if (!response.ok) {
-                // Якщо помилка, читаємо її як ТЕКСТ, а не JSON
-                const errorText = await response.text();
-                throw new Error(`Помилка сервера: ${response.status} - ${errorText}`);
-            }
-
-            // 2. Якщо все ок, читаємо JSON
-            const events = await response.json();
-
-            const listContainer = document.getElementById('eventsList');
-            listContainer.innerHTML = '';
-
-            if (events.length === 0) {
-                listContainer.innerHTML = '<p>Подій поки немає.</p>';
-                return;
-            }
-
-            events.forEach(event => {
-                const eventDate = new Date(event.event_date).toLocaleString();
-                const div = document.createElement('div');
-                div.className = 'event-card';
-                div.innerHTML = `
-                <div class="event-info">
-                    <h3>${event.title}</h3>
-                    <p>${event.description || 'Без опису'}</p>
-                    <p><strong>Коли:</strong> ${eventDate}</p>
-                    <p><strong>Де:</strong> ${event.venue_name || 'Невідомо'} (${event.city || ''})</p>
+<div id="createModal" class="modal-overlay">
+    <div class="modal-content-box">
+        <button class="close-btn" onclick="closeCreateModal()">×</button>
+        <h2>Create Event</h2>
+        <form id="createEventForm">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="title" required placeholder="Event title...">
+            </div>
+            <div class="form-group">
+                <label>Image (URL)</label>
+                <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="description" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Date</label>
+                <input type="datetime-local" id="date" required>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="categorySelect" required><option>Loading...</option></select>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <div class="row-btn">
+                    <select id="venueSelect" required style="flex-grow: 1;"><option>Loading...</option></select>
+                    <button type="button" class="btn btn-secondary" style="width: auto;" onclick="openMapModal()">+ New</button>
                 </div>
-                <button class="btn-delete" onclick="deleteEvent(${event.id})">Видалити</button>
-            `;
-                listContainer.appendChild(div);
-            });
-        } catch (error) {
-            console.error('Деталі помилки:', error);
-            // Виводимо помилку прямо на екран, щоб ви її бачили
-            document.getElementById('eventsList').innerHTML = `<p style="color:red; font-weight:bold;">${error.message}</p>`;
+            </div>
+            <button type="submit" class="btn btn-success">Create</button>
+        </form>
+    </div>
+</div>
+
+<div id="mapModal" class="modal-overlay" style="z-index: 3000;">
+    <div class="modal-content-box">
+        <h2>Select Location</h2>
+        <p>Click on the map to select an address.</p>
+        <div id="map"></div>
+        <div class="form-group"><input type="text" id="newVenueName" placeholder="Venue Name (e.g. Stadium)"></div>
+        <div class="form-group"><input type="text" id="newVenueCity" placeholder="City" readonly></div>
+        <div class="form-group"><input type="text" id="newVenueAddress" placeholder="Address" readonly></div>
+        <div class="row-btn">
+            <button class="btn btn-success" onclick="saveNewVenue()">Save</button>
+            <button class="btn btn-secondary" onclick="closeMapModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="eventDetailsModal" class="modal-overlay">
+    <div class="product-card-modal">
+        <button class="close-btn" onclick="closeEventDetails()">×</button>
+        <div class="product-body">
+            <div class="product-info">
+                <h2 id="detailTitle" style="color: var(--primary); margin-top: 0;"></h2>
+                <span id="detailCategory" style="background: var(--accent); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;"></span>
+                <p style="margin-top: 20px;"><strong>📅 When:</strong> <span id="detailDate"></span></p>
+                <p><strong>👤 Organizer:</strong> <span id="detailCreator"></span></p>
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <h4>About the event:</h4>
+                    <p id="detailDescription" style="color: #555;"></p>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h4>📍 Location:</h4>
+                    <p id="detailVenueName" style="font-weight: bold; margin-bottom: 0;"></p>
+                    <p id="detailAddress" style="color: #666; font-size: 0.9em; margin-top: 5px;"></p>
+                </div>
+            </div>
+            <div class="product-map"><div id="viewMap"></div></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const API_URL = 'http://localhost:3000/api/events';
+
+    let allEvents = [];
+    let map, marker, viewMap, viewMarker;
+    const FEATURED_IDS = [1, 25];
+
+    function checkAuth() {
+        const token = localStorage.getItem('token');
+        if (token) {
+            document.getElementById('authSection').classList.remove('active');
+            document.getElementById('appSection').classList.add('active');
+            initApp();
+        } else {
+            document.getElementById('authSection').classList.add('active');
+            document.getElementById('appSection').classList.remove('active');
         }
     }
+    function toggleAuthMode() {
+        const l = document.getElementById('loginFormWrapper');
+        const r = document.getElementById('registerFormWrapper');
+        if(l.style.display === 'none') { l.style.display='block'; r.style.display='none'; }
+        else { l.style.display='none'; r.style.display='block'; }
+    }
+    function logout() { localStorage.removeItem('token'); checkAuth(); }
 
-    document.getElementById('createEventForm').addEventListener('submit', async (e) => {
+    async function initApp() {
+        try {
+            const formRes = await fetch(`${API_URL}/form-data`);
+            if(!formRes.ok) throw new Error('Failed to fetch form data');
+            const formData = await formRes.json();
+            populateFilters(formData.categories);
+
+            const res = await fetch(API_URL);
+            if(!res.ok) throw new Error('Failed to fetch events');
+            allEvents = await res.json();
+
+            renderHeroSlider();
+            renderGrid(allEvents);
+        } catch (err) { console.error(err); }
+    }
+
+    function populateFilters(categories) {
+        const filterSel = document.getElementById('filterCategory');
+        filterSel.innerHTML = '<option value="all">All Categories</option>';
+        const createSel = document.getElementById('categorySelect');
+        createSel.innerHTML = '<option value="">Select Category</option>';
+
+        categories.forEach(c => {
+            filterSel.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+            createSel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+        loadVenuesForForm();
+    }
+
+    async function loadVenuesForForm() {
+        const res = await fetch(`${API_URL}/form-data`);
+        const data = await res.json();
+        const sel = document.getElementById('venueSelect');
+        sel.innerHTML = '<option value="">Select Location</option>';
+        data.venues.forEach(v => {
+            sel.innerHTML += `<option value="${v.id}">${v.name} (${v.city})</option>`;
+        });
+    }
+
+    let currentSlide = 0;
+    function renderHeroSlider() {
+        const container = document.getElementById('heroSlider');
+        const btns = container.querySelectorAll('button');
+        container.innerHTML = '';
+        btns.forEach(b => container.appendChild(b));
+
+        let slidesData = allEvents.filter(e => FEATURED_IDS.includes(e.id));
+        if(slidesData.length === 0) slidesData = allEvents.slice(0, 3);
+
+        slidesData.forEach((ev, idx) => {
+            const div = document.createElement('div');
+            div.className = `slide ${idx === 0 ? 'active' : ''}`;
+            div.style.backgroundImage = `url('${ev.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}')`;
+            const date = new Date(ev.event_date).toLocaleDateString('en-US');
+            div.innerHTML = `
+                    <div class="hero-content">
+                        <span class="hero-date">${date}</span>
+                        <h2 class="hero-title">${ev.title}</h2>
+                        <button class="btn btn-primary" style="width:auto; margin-top:20px;" onclick="openEventDetails(${ev.id})">Details</button>
+                    </div>`;
+            container.appendChild(div);
+        });
+    }
+    function moveSlide(dir) {
+        const slides = document.querySelectorAll('.slide');
+        if(!slides.length) return;
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (currentSlide + dir + slides.length) % slides.length;
+        slides[currentSlide].classList.add('active');
+    }
+    setInterval(() => moveSlide(1), 5000);
+
+    // --- GRID ---
+    function renderGrid(data) {
+        const grid = document.getElementById('eventsGrid');
+        grid.innerHTML = '';
+        if(data.length === 0) { grid.innerHTML = '<p>No events found</p>'; return; }
+
+        data.forEach(ev => {
+            const date = new Date(ev.event_date).toLocaleDateString('en-US', {day:'numeric', month:'long'});
+            const img = ev.image_url || 'https://images.unsplash.com/photo-1514525253440-b393452e8d26?auto=format&fit=crop&w=500&q=60';
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                    <div class="delete-btn" onclick="deleteEvent(event, ${ev.id})">×</div>
+                    <div class="card-img" style="background-image: url('${img}')">
+                        <span class="card-cat">${ev.category_name || 'Event'}</span>
+                    </div>
+                    <div class="card-body" onclick="openEventDetails(${ev.id})">
+                        <div class="card-date">${date}</div>
+                        <h3 class="card-title">${ev.title}</h3>
+                        <div class="card-loc">📍 ${ev.city || 'Online'}</div>
+                    </div>`;
+            grid.appendChild(card);
+        });
+    }
+
+    function applyFilters() {
+        const cat = document.getElementById('filterCategory').value;
+        const search = document.getElementById('filterSearch').value.toLowerCase();
+        const dateVal = document.getElementById('filterDate').value;
+        const filtered = allEvents.filter(e => {
+            const matchCat = cat === 'all' || e.category_name === cat;
+            const matchSearch = e.title.toLowerCase().includes(search);
+            let matchDate = true;
+            if(dateVal) matchDate = new Date(e.event_date).toISOString().split('T')[0] === dateVal;
+            return matchCat && matchSearch && matchDate;
+        });
+        renderGrid(filtered);
+    }
+
+    function openCreateModal() { document.getElementById('createModal').style.display = 'flex'; }
+    function closeCreateModal() { document.getElementById('createModal').style.display = 'none'; }
+
+    document.getElementById('createEventForm').onsubmit = async (e) => {
         e.preventDefault();
-
-        const newEvent = {
+        const token = localStorage.getItem('token');
+        const body = {
             title: document.getElementById('title').value,
             description: document.getElementById('description').value,
             event_date: document.getElementById('date').value,
-            venue_id: document.getElementById('venueId').value,
-            creator_id: document.getElementById('creatorId').value
+            venue_id: document.getElementById('venueSelect').value,
+            category_id: document.getElementById('categorySelect').value,
+            image_url: document.getElementById('imageUrl').value
         };
+        const res = await fetch(API_URL, {
+            method: 'POST', headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${token}`},
+            body: JSON.stringify(body)
+        });
+        if(res.ok) { alert('Success!'); closeCreateModal(); initApp(); }
+        else alert('Creation Error');
+    };
 
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newEvent)
-            });
-
-            if (response.ok) {
-                alert('Івент створено!');
-                document.getElementById('createEventForm').reset();
-                fetchEvents();
-            } else {
-                alert('Помилка при створенні');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    });
-
-    async function deleteEvent(id) {
-        if(!confirm('Ви точно хочете видалити цю подію?')) return;
-
-        try {
-            const response = await fetch(`${API_URL}/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                fetchEvents();
-            } else {
-                alert('Не вдалося видалити');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
+    async function deleteEvent(e, id) {
+        e.stopPropagation();
+        if(!confirm('Delete?')) return;
+        const res = await fetch(`${API_URL}/${id}`, {
+            method: 'DELETE', headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
+        });
+        if(res.ok) initApp();
+        else alert('Error (Permission denied?)');
     }
 
-    fetchEvents();
+    function openMapModal() {
+        document.getElementById('mapModal').style.display = 'flex';
+        if(!map) {
+            map = L.map('map').setView([60.392103, 5.323113], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            map.on('click', async (e) => {
+                const {lat, lng} = e.latlng;
+                if(marker) map.removeLayer(marker);
+                marker = L.marker([lat, lng]).addTo(map);
+                document.getElementById('newVenueCity').value = '...';
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+                const d = await res.json();
+                document.getElementById('newVenueCity').value = d.address.city || d.address.town || '';
+                document.getElementById('newVenueAddress').value = d.display_name;
+            });
+        }
+        setTimeout(() => map.invalidateSize(), 100);
+    }
+    function closeMapModal() { document.getElementById('mapModal').style.display = 'none'; }
+
+    async function saveNewVenue() {
+        const name = document.getElementById('newVenueName').value;
+        const city = document.getElementById('newVenueCity').value;
+        const address = document.getElementById('newVenueAddress').value;
+        const res = await fetch(`${API_URL}/venues`, {
+            method: 'POST', headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}`},
+            body: JSON.stringify({name, city, address})
+        });
+        if(res.ok) { alert('Saved!'); closeMapModal(); loadVenuesForForm(); }
+    }
+
+    async function openEventDetails(id) {
+        document.getElementById('eventDetailsModal').style.display = 'flex';
+        const res = await fetch(`${API_URL}/${id}`, {headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}});
+        const ev = await res.json();
+
+        document.getElementById('detailTitle').innerText = ev.title;
+        document.getElementById('detailCategory').innerText = ev.category_name || '';
+        document.getElementById('detailDate').innerText = new Date(ev.event_date).toLocaleString('en-US');
+        document.getElementById('detailCreator').innerText = ev.creator_name || '';
+        document.getElementById('detailDescription').innerText = ev.description;
+        document.getElementById('detailVenueName').innerText = ev.venue_name || '';
+        document.getElementById('detailAddress').innerText = ev.address || '';
+
+        if(!viewMap) {
+            viewMap = L.map('viewMap').setView([50.4501, 30.5234], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(viewMap);
+        }
+        if(ev.city || ev.address) {
+            const q = `${ev.city||''} ${ev.address||''}`;
+            const gRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+            const gData = await gRes.json();
+            if(gData.length) {
+                const {lat, lon} = gData[0];
+                viewMap.setView([lat, lon], 15);
+                if(viewMarker) viewMap.removeLayer(viewMarker);
+                viewMarker = L.marker([lat, lon]).addTo(viewMap).bindPopup(ev.venue_name).openPopup();
+            }
+        }
+        setTimeout(() => viewMap.invalidateSize(), 200);
+    }
+    function closeEventDetails() { document.getElementById('eventDetailsModal').style.display = 'none'; }
+
+    // AUTH FORM
+    document.getElementById('loginForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const res = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({email: document.getElementById('loginEmail').value, password: document.getElementById('loginPassword').value})
+        });
+        const d = await res.json();
+        if(res.ok) { localStorage.setItem('token', d.token); checkAuth(); } else alert(d.msg);
+    };
+    document.getElementById('registerForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const res = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({username: document.getElementById('regUsername').value, email: document.getElementById('regEmail').value, password: document.getElementById('regPassword').value})
+        });
+        if(res.ok) { alert('Success!'); toggleAuthMode(); } else alert('Error');
+    };
+
+    checkAuth();
 </script>
 </body>
 </html>
