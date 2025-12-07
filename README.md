@@ -1,75 +1,127 @@
-# 📅 Event Manager (Arrangementskalender)
+# 📅 EventFlow – The Ultimate Event Management Platform
 
-En full-stack webapplikasjon for å oppdage, opprette og administrere arrangementer. Prosjektet bruker et interaktivt kart for stedsvalg, dynamisk filtrering og sikker brukerautentisering.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Node.js](https://img.shields.io/badge/Node.js-v18-green.svg)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-v14-blue.svg)
+![Express](https://img.shields.io/badge/Express-v4-lightgrey.svg)
 
----
-
-## 🛠️ Teknologier
-
-Prosjektet er bygget med en moderne stack som sikrer ytelse og skalerbarhet:
-
-### Backend (Server)
-* **Node.js** & **Express.js**: Håndterer API-forespørsler og serverlogikk.
-* **PostgreSQL**: Relasjonsdatabase for lagring av brukere, hendelser og steder.
-* **pg (node-postgres)**: Driver for å kommunisere med databasen.
-* **JSON Web Tokens (JWT)**: For sikker, statsløs autentisering.
-* **Bcryptjs**: For hashing og sikring av passord.
-
-### Frontend (Klient)
-* **HTML5, CSS3 & Vanilla JavaScript**: En lettvektig frontend uten store rammeverk.
-* **Leaflet.js**: Bibliotek for interaktive kart.
-* **Nominatim API (OpenStreetMap)**: Brukes til "Reverse Geocoding" (gjør om kartkoordinater til tekst-adresser).
+> **EventFlow** er ikke bare en kalender. Det er en komplett, lokasjonsbasert plattform for å oppdage og administrere kulturelle arrangementer. Prosjektet kombinerer moderne backend-arkitektur med et responsivt, kart-drevet brukergrensesnitt.
 
 ---
 
-## 📂 Prosjektstruktur og Kodeanalyse
+## 📑 Innholdsfortegnelse
 
-Applikasjonen følger en **MVC-arkitektur** (Model-View-Controller) for å holde koden organisert og vedlikeholdbar.
-
-### 1. Inngangspunkt (`app.js`)
-Dette er kjernen i applikasjonen. Filen konfigurerer Express-serveren, setter opp mellomvare (middleware) som `cors` og `express.json`, og kobler ruter til applikasjonen. Den serverer også de statiske frontend-filene fra `public`-mappen.
-
-### 2. Databasetilkobling (`db.js`)
-Her opprettes en tilkoblings-pool mot PostgreSQL. Ved å bruke en pool sikrer vi effektiv håndtering av flere samtidige databaseforespørsler. Konfigurasjonen hentes sikkert fra miljøvariabler (`.env`).
-
-### 3. Ruting (`routes/events.js`)
-Dette filen fungerer som en trafikkdirigent. Den definerer alle API-endepunktene (`/api/events/...`) og delegerer logikken til riktig kontroller.
-* **Beskyttede ruter:** Endepunkter for å opprette/slette data bruker `verifyToken`-middleware for å sikre at kun innloggede brukere får tilgang.
-
-### 4. Kontrollere (`controllers/`)
-Her ligger forretningslogikken:
-* **`authController.js`**: Håndterer registrering og innlogging. Den sjekker passord mot databasen og utsteder JWT-tokens.
-* **`eventController.js`**: Utfører SQL-spørringer.
-    * *Transaksjoner:* Ved opprettelse av arrangementer brukes SQL-transaksjoner (`BEGIN`, `COMMIT`) for å sikre at data ikke blir korrupt hvis noe går galt midt i prosessen.
-    * *Joins:* `getAllEvents`-funksjonen bruker `LEFT JOIN` for å hente data fra tabellene `users`, `venues` og `categories` i én enkelt spørring.
-
-### 5. Frontend Logikk (`index.html` & Scripts)
-Frontend fungerer som en **Single Page Application (SPA)**.
-* **Tilstandsstyring:** JavaScript bytter synlighet på seksjoner (Login vs. Dashboard) basert på om brukeren har en token i `localStorage`.
-* **Kartintegrasjon:** Når en bruker klikker på kartet i "Nytt sted"-modulen, henter JavaScript bredde- og lengdegrad, sender disse til OpenStreetMap API, og fyller automatisk inn by og adresse i skjemaet.
+1.  [Om Prosjektet](#-om-prosjektet)
+2.  [Nøkkelfunksjoner](#-nøkkelfunksjoner)
+3.  [Teknisk Arkitektur](#-teknisk-arkitektur)
+4.  [Database & Datamodell](#-database--datamodell)
+5.  [API Dokumentasjon](#-api-dokumentasjon)
+6.  [Installasjon & Oppsett](#-installasjon--oppsett)
+7.  [Fremtidig Veikart (Roadmap)](#-fremtidig-veikart)
 
 ---
 
-## 🗄️ Database Database-skjema
+## 📖 Om Prosjektet
 
-Systemet bruker følgende relasjonelle tabeller:
+Målet med **EventFlow** var å løse utfordringen med statiske arrangementslister. De fleste kalendere viser bare en liste med datoer. EventFlow legger til en **geografisk dimensjon** ved å la arrangører velge nøyaktige steder på et kart, og lar brukere se nøyaktig hvor ting skjer.
 
-* **users**: `id, username, email, password_hash, role`
-* **venues**: `id, name, address, city` (Lagrer lokasjonstekst)
-* **categories**: `id, name` (F.eks. Musikk, Sport)
-* **events**: `id, title, description, date, creator_id, venue_id, image_url`
-* **event_categories**: Koblingstabell for many-to-many relasjoner.
+Applikasjonen er bygget som en **Single Page Application (SPA)**, som betyr at navigasjon mellom visninger (Login, Dashboard, Detaljer) skjer umiddelbart uten at nettsiden lastes på nytt.
 
 ---
 
-## 🚀 Installasjon og Oppsett
+## ✨ Nøkkelfunksjoner
 
-Følg disse stegene for å kjøre prosjektet lokalt.
+### For Brukere (Publikum)
+* **Hero Slider:** En dynamisk bildekarusell som fremhever utvalgte "Featured Events" automatisk.
+* **Smart Filtrering:** Filtrer arrangementer basert på kategori (Musikk, Sport, Teater), dato eller fritekstsøk i sanntid.
+* **Interaktivt Dashboard:** Responsivt rutenett (Grid Layout) som viser hendelser med bilder og nøkkelinfo.
+* **Detaljvisning:** Klikk på et arrangement for å se beskrivelse, arrangør, og et integrert kart som viser nøyaktig posisjon.
 
-### 1. Klon prosjektet
-Last ned koden til din maskin.
+### For Arrangører (Admin)
+* **Sikker Tilgang:** JWT-basert autentisering sikrer at kun registrerte brukere kan opprette innhold.
+* **Geo-Tagging:** Integrert **Leaflet.js** kart lar arrangøren klikke hvor som helst i verden for å opprette et nytt "Venue". Systemet henter automatisk adresse og bynavn via OpenStreetMap API.
+* **CRUD-operasjoner:** Full kontroll over opprettelse og sletting av egne arrangementer.
 
-### 2. Installer avhengigheter
-Åpne terminalen i prosjektmappen og kjør:
+---
+
+## 🛠️ Teknisk Arkitektur
+
+Prosjektet er bygget på **MVC (Model-View-Controller)** prinsippet for å sikre separasjon av ansvar (Separation of Concerns).
+
+### Backend (Server-side)
+* **Runtime:** Node.js.
+* **Rammeverk:** Express.js for ruting og middleware-håndtering.
+* **Sikkerhet:**
+    * `bcryptjs`: Brukes til å hashe passord med "salt" før de lagres i databasen.
+    * `jsonwebtoken`: Genererer signerte tokens for å holde brukere innlogget uten server-sessions.
+    * `cors`: Konfigurert for å tillate forespørsler fra godkjente kilder.
+
+### Frontend (Klient-side)
+* **Vanilla JS (ES6+):** Ingen tunge rammeverk (som React/Angular). Dette demonstrerer dyp forståelse av DOM-manipulasjon, `fetch`-APIet og asynkron programmering (`async/await`).
+* **Leaflet.js:** Bibliotek for rendering av kart.
+* **CSS3:** Bruk av CSS Variables (`:root`) og Flexbox/Grid for layout.
+
+### Eksterne API-er
+* **Nominatim (OpenStreetMap):** Brukes for "Reverse Geocoding" – konvertering av bredde/lengdegrad til lesbar adresse.
+
+---
+
+## 🗄️ Database & Datamodell
+
+Databasen er en relasjonell **PostgreSQL**-database designet for dataintegritet og effektivitet.
+
+### ER-Diagram (Relasjoner)
+
+* **Users** `1` --- `N` **Events** (En bruker kan opprette mange arrangementer).
+* **Venues** `1` --- `N` **Events** (Et sted kan ha mange arrangementer).
+* **Events** `N` --- `N` **Categories** (Et arrangement kan tilhøre flere kategorier - *implementert via koblingstabell*).
+
+### Tabellstruktur
+
+1.  **`users`**: Lagrer brukerdata. Passord er kryptert.
+2.  **`venues`**: Lagrer fysiske steder. Separasjon fra `events`-tabellen hindrer dataduplisering.
+3.  **`categories`**: Statiske kategorier (f.eks. "Music", "Sport").
+4.  **`events`**: Hovedtabellen. Inneholder fremmednøkler (`FK`) til `users` og `venues`.
+
+**SQL-transaksjoner:**
+Ved opprettelse av et arrangement brukes SQL-transaksjoner (`BEGIN`, `COMMIT`, `ROLLBACK`). Dette sikrer at systemet ikke lagrer et arrangement hvis tilkoblingen til kategorien feiler.
+
+---
+
+## 📡 API Dokumentasjon
+
+Her er en oversikt over de viktigste endepunktene (Endpoints) i API-et.
+
+### Autentisering
+
+| Metode | Endepunkt | Beskrivelse | Body (JSON) |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/events/auth/register` | Opprett ny bruker | `{ username, email, password }` |
+| `POST` | `/api/events/auth/login` | Logg inn bruker | `{ email, password }` |
+
+### Arrangementer (Events)
+
+| Metode | Endepunkt | Beskyttet? | Beskrivelse |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/events` | Nei | Henter alle arrangementer med `JOIN` data. |
+| `GET` | `/api/events/:id` | Nei | Henter detaljer for ett arrangement. |
+| `POST` | `/api/events` | **Ja** 🔒 | Oppretter nytt arrangement. Krever Token. |
+| `DELETE`| `/api/events/:id` | **Ja** 🔒 | Sletter et arrangement (kun eier). |
+
+### Støttedata
+
+| Metode | Endepunkt | Beskrivelse |
+| :--- | :--- | :--- |
+| `GET` | `/api/events/form-data` | Henter lister over kategorier og steder for utfylling av skjema. |
+| `POST` | `/api/events/venues` | **Ja** 🔒 Lagrer et nytt sted i databasen. |
+
+---
+
+## 🚀 Installasjon & Oppsett
+
+Følg disse stegene for å kjøre prosjektet lokalt på din maskin.
+
+### 1. Klon Repositoriet
 ```bash
-npm install
+git clone [https://github.com/ditt-brukernavn/eventflow.git](https://github.com/ditt-brukernavn/eventflow.git)
+cd eventflow
