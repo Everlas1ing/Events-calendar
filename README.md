@@ -1,127 +1,153 @@
-# 📅 EventFlow – The Ultimate Event Management Platform
+Teknisk Dokumentasjonsrapport: Visit Events System
+1. Prosjektoversikt
+Dette prosjektet er en webapplikasjon for hendelseshåndtering ("Event Management System"). Systemet lar brukere registrere seg, logge inn, opprette arrangementer, se en oversikt over kommende hendelser, og filtrere disse basert på kategorier, dato og søkeord. Applikasjonen inkluderer også funksjonalitet for å legge til steder (venues) via et interaktivt kart.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Node.js](https://img.shields.io/badge/Node.js-v18-green.svg)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-v14-blue.svg)
-![Express](https://img.shields.io/badge/Express-v4-lightgrey.svg)
+Hovedfunksjoner
+Autentisering: Brukerregistrering og innlogging med JWT (JSON Web Tokens).
 
-> **EventFlow** er ikke bare en kalender. Det er en komplett, lokasjonsbasert plattform for å oppdage og administrere kulturelle arrangementer. Prosjektet kombinerer moderne backend-arkitektur med et responsivt, kart-drevet brukergrensesnitt.
+Hendelser (Events): CRUD-operasjoner (Create, Read, Update, Delete) for arrangementer.
 
----
+Steder (Venues): Opprettelse av nye lokasjoner ved hjelp av kartintegrasjon (OpenStreetMap/Leaflet).
 
-## 📑 Innholdsfortegnelse
+Frontend: Responsivt brukergrensesnitt med dynamisk lasting av data.
 
-1.  [Om Prosjektet](#-om-prosjektet)
-2.  [Nøkkelfunksjoner](#-nøkkelfunksjoner)
-3.  [Teknisk Arkitektur](#-teknisk-arkitektur)
-4.  [Database & Datamodell](#-database--datamodell)
-5.  [API Dokumentasjon](#-api-dokumentasjon)
-6.  [Installasjon & Oppsett](#-installasjon--oppsett)
-7.  [Fremtidig Veikart (Roadmap)](#-fremtidig-veikart)
+2. Teknologistack
+Backend
+Kjøremiljø: Node.js
 
----
+Rammeverk: Express.js
 
-## 📖 Om Prosjektet
+Sikkerhet: bcryptjs (passordhashing), jsonwebtoken (sesjonshåndtering), cors (Cross-Origin Resource Sharing).
 
-Målet med **EventFlow** var å løse utfordringen med statiske arrangementslister. De fleste kalendere viser bare en liste med datoer. EventFlow legger til en **geografisk dimensjon** ved å la arrangører velge nøyaktige steder på et kart, og lar brukere se nøyaktig hvor ting skjer.
+Database-driver: pg (node-postgres).
 
-Applikasjonen er bygget som en **Single Page Application (SPA)**, som betyr at navigasjon mellom visninger (Login, Dashboard, Detaljer) skjer umiddelbart uten at nettsiden lastes på nytt.
+Database
+System: PostgreSQL.
 
----
+Frontend
+Kjerne: HTML5, CSS3, Vanilla JavaScript (ES6+).
 
-## ✨ Nøkkelfunksjoner
+Kart: Leaflet.js (med OpenStreetMap tiles).
 
-### For Brukere (Publikum)
-* **Hero Slider:** En dynamisk bildekarusell som fremhever utvalgte "Featured Events" automatisk.
-* **Smart Filtrering:** Filtrer arrangementer basert på kategori (Musikk, Sport, Teater), dato eller fritekstsøk i sanntid.
-* **Interaktivt Dashboard:** Responsivt rutenett (Grid Layout) som viser hendelser med bilder og nøkkelinfo.
-* **Detaljvisning:** Klikk på et arrangement for å se beskrivelse, arrangør, og et integrert kart som viser nøyaktig posisjon.
+Geokoding: Nominatim API (for å hente adresse fra koordinater).
 
-### For Arrangører (Admin)
-* **Sikker Tilgang:** JWT-basert autentisering sikrer at kun registrerte brukere kan opprette innhold.
-* **Geo-Tagging:** Integrert **Leaflet.js** kart lar arrangøren klikke hvor som helst i verden for å opprette et nytt "Venue". Systemet henter automatisk adresse og bynavn via OpenStreetMap API.
-* **CRUD-operasjoner:** Full kontroll over opprettelse og sletting av egne arrangementer.
+3. Databaseanalyse og Skjema
+Basert på SQL-spørringene i koden (pool.query), er databasen strukturert rundt følgende relasjonelle tabeller. Her er en rekonstruksjon av skjemaet:
 
----
+Tabeller
+users
 
-## 🛠️ Teknisk Arkitektur
+Brukes til autentisering.
 
-Prosjektet er bygget på **MVC (Model-View-Controller)** prinsippet for å sikre separasjon av ansvar (Separation of Concerns).
+Kolonner: id (PK), username, email (unik), password_hash.
 
-### Backend (Server-side)
-* **Runtime:** Node.js.
-* **Rammeverk:** Express.js for ruting og middleware-håndtering.
-* **Sikkerhet:**
-    * `bcryptjs`: Brukes til å hashe passord med "salt" før de lagres i databasen.
-    * `jsonwebtoken`: Genererer signerte tokens for å holde brukere innlogget uten server-sessions.
-    * `cors`: Konfigurert for å tillate forespørsler fra godkjente kilder.
+venues
 
-### Frontend (Klient-side)
-* **Vanilla JS (ES6+):** Ingen tunge rammeverk (som React/Angular). Dette demonstrerer dyp forståelse av DOM-manipulasjon, `fetch`-APIet og asynkron programmering (`async/await`).
-* **Leaflet.js:** Bibliotek for rendering av kart.
-* **CSS3:** Bruk av CSS Variables (`:root`) og Flexbox/Grid for layout.
+Lagrer informasjon om steder arrangementer holdes.
 
-### Eksterne API-er
-* **Nominatim (OpenStreetMap):** Brukes for "Reverse Geocoding" – konvertering av bredde/lengdegrad til lesbar adresse.
+Kolonner: id (PK), name, address, city.
 
----
+Merk: Koden refererer til lat og lng i input, men SQL-spørringen i createVenue setter foreløpig bare inn name, address, city.
 
-## 🗄️ Database & Datamodell
+categories
 
-Databasen er en relasjonell **PostgreSQL**-database designet for dataintegritet og effektivitet.
+Kategorisering av hendelser (f.eks. Konsert, Sport).
 
-### ER-Diagram (Relasjoner)
+Kolonner: id (PK), name.
 
-* **Users** `1` --- `N` **Events** (En bruker kan opprette mange arrangementer).
-* **Venues** `1` --- `N` **Events** (Et sted kan ha mange arrangementer).
-* **Events** `N` --- `N` **Categories** (Et arrangement kan tilhøre flere kategorier - *implementert via koblingstabell*).
+events
 
-### Tabellstruktur
+Hovedtabellen for systemet.
 
-1.  **`users`**: Lagrer brukerdata. Passord er kryptert.
-2.  **`venues`**: Lagrer fysiske steder. Separasjon fra `events`-tabellen hindrer dataduplisering.
-3.  **`categories`**: Statiske kategorier (f.eks. "Music", "Sport").
-4.  **`events`**: Hovedtabellen. Inneholder fremmednøkler (`FK`) til `users` og `venues`.
+Kolonner: id (PK), title, description, event_date, image_url, creator_id (FK -> users.id), venue_id (FK -> venues.id).
 
-**SQL-transaksjoner:**
-Ved opprettelse av et arrangement brukes SQL-transaksjoner (`BEGIN`, `COMMIT`, `ROLLBACK`). Dette sikrer at systemet ikke lagrer et arrangement hvis tilkoblingen til kategorien feiler.
+event_categories
 
----
+Koblingstabell for mange-til-mange forhold (eller en-til-mange) mellom events og kategorier.
 
-## 📡 API Dokumentasjon
+Kolonner: event_id (FK), category_id (FK).
 
-Her er en oversikt over de viktigste endepunktene (Endpoints) i API-et.
+4. Kodianalyse: Backend (Node.js/Express)
+Backend er strukturert etter MVC-prinsippet (Model-View-Controller), selv om "View" her er en separat frontend-fil, og SQL-spørringer ligger direkte i kontrollerne (ingen separat ORM/Model-lag).
 
-### Autentisering
+4.1 Autentisering (authController)
+Registrering (register):
 
-| Metode | Endepunkt | Beskrivelse | Body (JSON) |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/events/auth/register` | Opprett ny bruker | `{ username, email, password }` |
-| `POST` | `/api/events/auth/login` | Logg inn bruker | `{ email, password }` |
+Sjekker om e-posten allerede eksisterer.
 
-### Arrangementer (Events)
+Hasher passordet med bcrypt.genSalt(10) og bcrypt.hash. Dette er "best practice" for passordlagring.
 
-| Metode | Endepunkt | Beskyttet? | Beskrivelse |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/events` | Nei | Henter alle arrangementer med `JOIN` data. |
-| `GET` | `/api/events/:id` | Nei | Henter detaljer for ett arrangement. |
-| `POST` | `/api/events` | **Ja** 🔒 | Oppretter nytt arrangement. Krever Token. |
-| `DELETE`| `/api/events/:id` | **Ja** 🔒 | Sletter et arrangement (kun eier). |
+Lagrer brukeren i databasen.
 
-### Støttedata
+Innlogging (login):
 
-| Metode | Endepunkt | Beskrivelse |
-| :--- | :--- | :--- |
-| `GET` | `/api/events/form-data` | Henter lister over kategorier og steder for utfylling av skjema. |
-| `POST` | `/api/events/venues` | **Ja** 🔒 Lagrer et nytt sted i databasen. |
+Henter bruker basert på e-post.
 
----
+Sammenligner passord med bcrypt.compare.
 
-## 🚀 Installasjon & Oppsett
+Utsteder en JWT-token som inneholder id og username, signert med process.env.JWT_SECRET. Tokenet utløper om 1 time.
 
-Følg disse stegene for å kjøre prosjektet lokalt på din maskin.
+4.2 Hendelseshåndtering (eventController)
+Transaksjoner: Funksjonen createEvent bruker database-transaksjoner (BEGIN, COMMIT, ROLLBACK). Dette er utmerket praksis. Det sikrer at hvis opprettelsen av en hendelse lykkes, men koblingen til kategorien feiler, vil hele operasjonen rulles tilbake for å hindre korrupte data.
 
-### 1. Klon Repositoriet
-```bash
-git clone [https://github.com/ditt-brukernavn/eventflow.git](https://github.com/ditt-brukernavn/eventflow.git)
-cd eventflow
+Henting av data (getAllEvents):
+
+Bruker LEFT JOIN for å hente data fra venues, event_categories og categories i samme spørring.
+
+Inkluderer en dedupliserings-logikk (map og uniqueEvents) i JavaScript. Notat: Dette kan optimaliseres med GROUP BY eller DISTINCT direkte i SQL for bedre ytelse.
+
+Skjemadata (getFormData):
+
+Et hjelpe-endepunkt som henter både venues og categories samtidig. Dette reduserer antall nettverksforespørsler fra frontend når skjemaet lastes.
+
+4.3 Middleware (verifyToken)
+Beskytter ruter som krever innlogging (f.eks. opprette eller slette events).
+
+Henter token fra Authorization: Bearer <token> headeren.
+
+Verifiserer tokenet og legger dekodet brukerinformasjon til req.user.
+
+4.4 Konfigurasjon
+Bruker .env for å skjule sensitiv informasjon som DB-passord og JWT-hemmeligheter.
+
+db.js bruker en "connection pool" som er effektivt for skalering, da det gjenbruker databasekoblinger.
+
+5. Kodianalyse: Frontend (Vanilla JS)
+Frontend er bygget som en Single Page Application (SPA)-lignende struktur i én enkelt HTML-fil.
+
+5.1 Struktur og Design
+Bruker CSS-variabler (--primary, --accent) for konsistent tema.
+
+Layout er responsiv (Grid og Flexbox).
+
+Seksjoner: Bytter mellom "Auth" (innlogging) og "App" (hovedvisning) ved å manipulere CSS-klasser (display: none/block), basert på om en JWT-token finnes i localStorage.
+
+5.2 Interaktivitet
+Kart (Leaflet):
+
+Brukeren kan klikke på et kart for å velge en lokasjon for et nytt sted (Venue).
+
+Integrert med Nominatim API for "Reverse Geocoding" (gjør om koordinater til en lesbar adresse automatisk).
+
+Dynamisk HTML: Funksjonen renderGrid genererer HTML-kort for hvert event basert på JSON-data fra backend.
+
+Filtrering: applyFilters() kjører på klientsiden. Den filtrerer listen over nedlastede events i sanntid uten å spørre databasen på nytt. Dette gir en rask brukeropplevelse for mindre datasett.
+
+5.3 Kommunikasjon
+Bruker fetch-APIet for asynkrone kall.
+
+Bearer-token sendes automatisk med i headeren på beskyttede kall (POST, DELETE).
+
+6. API DokumentasjonHer er oversikten over de eksponerte endepunktene (Routes):
+Metode,Endepunkt,Beskrivelse,Autentisering
+POST,/api/auth/register,Registrer ny bruker,Nei
+POST,/api/auth/login,Logg inn og motta token,Nei
+GET,/api/events,Hent alle events (med filterdata),Nei
+GET,/api/events/:id,Hent detaljer for ett event,Nei
+GET,/api/events/form-data,Hent liste over venues og kategorier,Nei
+POST,/api/events,Opprett nytt event,Ja (JWT)
+PUT,/api/events/:id,Oppdater event,Ja (JWT)
+DELETE,/api/events/:id,Slett event,Ja (JWT)
+POST,/api/events/venues,Opprett nytt sted (Venue),Ja (JWT)
+
+8. Vurdering og AnbefalingerPositivtSikkerhet: God bruk av bcrypt og parametriserte SQL-spørringer (hindrer SQL Injection).Arkitektur: Ren separasjon av ruter og logikk.Transaksjoner: Riktig håndtering av databaseintegritet ved opprettelse av events.Brukervennlighet: Kartintegrasjon og automatisk adresseoppslag hever kvaliteten betraktelig.Områder for forbedring (Next Steps)Validering: Det mangler input-validering på backend (utover det databasen krever). Biblioteket express-validator bør legges til for å sjekke at e-poster er gyldige og felter ikke er tomme før de når databasen.Frontend Sikkerhet: Lagring av JWT i localStorage er utsatt for XSS-angrep (Cross-Site Scripting). For høyere sikkerhet bør token lagres i en httpOnly cookie.Feilhåndtering: Hvis geokoding-APIet (Nominatim) er nede, vil stedsvelgeren feile stille. Legg til en "fallback" hvor brukeren kan skrive adresse manuelt.Søk: Søk og filtrering skjer nå i nettleseren (allEvents.filter). Når databasen vokser til tusenvis av events, vil dette bli tregt. Filtrering bør flyttes til backend (SQL WHERE klausuler).KonklusjonDette er et solid utgangspunkt for et eventsystem. Koden er strukturert, lesbar og bruker moderne prinsipper for asynkron programmering. Med små justeringer på validering og skalering, er dette klart for produksjon i liten skala.
