@@ -248,7 +248,7 @@
 
     let allEvents = [];
     let map, marker, viewMap, viewMarker;
-    const FEATURED_IDS = [1, 25];
+    const FEATURED_IDS = [1, 25, 29];
 
     function checkAuth() {
         const token = localStorage.getItem('token');
@@ -355,13 +355,15 @@
             card.className = 'card';
             card.innerHTML = `
                     <div class="delete-btn" onclick="deleteEvent(event, ${ev.id})">×</div>
+                    <div onclick="openEventDetails(${ev.id})">
                     <div class="card-img" style="background-image: url('${img}')">
                         <span class="card-cat">${ev.category_name || 'Event'}</span>
                     </div>
-                    <div class="card-body" onclick="openEventDetails(${ev.id})">
+                    <div class="card-body">
                         <div class="card-date">${date}</div>
                         <h3 class="card-title">${ev.title}</h3>
                         <div class="card-loc">📍 ${ev.city || 'Online'}</div>
+                    </div>
                     </div>`;
             grid.appendChild(card);
         });
